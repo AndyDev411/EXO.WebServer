@@ -1,4 +1,6 @@
-﻿namespace EXO.WebServer.Server
+﻿using EXO.Networking.Common;
+
+namespace EXO.WebServer.Server
 {
     public class Room
     {

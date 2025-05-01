@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using EXO.WebServerClient;
+using EXO.WebClient;
 using System.Diagnostics;
+using EXO.Networking.Common;
 
 namespace ServerTestApp
 {

@@ -5,9 +5,11 @@ VisualStudioVersion = 17.11.35219.272
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EXO.WebServer", "EXO.WebServer\EXO.WebServer.csproj", "{3021E64E-416C-40B9-9475-4C283D72FC93}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerTestApp", "ServerTestApp\ServerTestApp.csproj", "{BEA0E3C0-5845-4BD5-BE14-AC45E06390F1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerTestApp", "ServerTestApp\ServerTestApp.csproj", "{BEA0E3C0-5845-4BD5-BE14-AC45E06390F1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EXO.WebServerClient", "EXO.WebServerClient\EXO.WebServerClient.csproj", "{97D2B778-84B1-40A1-B60B-7BD4FF998ED3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EXO.WebClient", "EXO.WebServerClient\EXO.WebClient.csproj", "{97D2B778-84B1-40A1-B60B-7BD4FF998ED3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EXO.Networking.Common", "EXO.Networking.Common\EXO.Networking.Common.csproj", "{BEEC7364-1115-4DFF-A62F-D7B53AB5F64D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{97D2B778-84B1-40A1-B60B-7BD4FF998ED3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{97D2B778-84B1-40A1-B60B-7BD4FF998ED3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{97D2B778-84B1-40A1-B60B-7BD4FF998ED3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BEEC7364-1115-4DFF-A62F-D7B53AB5F64D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEEC7364-1115-4DFF-A62F-D7B53AB5F64D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BEEC7364-1115-4DFF-A62F-D7B53AB5F64D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BEEC7364-1115-4DFF-A62F-D7B53AB5F64D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,4 @@
-﻿namespace EXO.WebServer.Server
+﻿namespace EXO.Networking.Common
 {
     public enum PacketType : byte
     {

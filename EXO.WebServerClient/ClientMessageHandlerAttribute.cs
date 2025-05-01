@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EXO.WebServerClient
+namespace EXO.WebClient
 {
 
     [AttributeUsage(AttributeTargets.Method)]

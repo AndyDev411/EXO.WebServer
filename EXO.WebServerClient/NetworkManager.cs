@@ -1,5 +1,4 @@
-﻿using EXO.WebServer.Server;
-using EXO.WebServerClient;
+﻿using EXO.WebClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +6,9 @@ using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using EXO.Networking.Common;
 
-namespace EXO.WebServerClient
+namespace EXO.WebClient
 {
     public class NetworkManager
     {

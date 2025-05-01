@@ -1,7 +1,8 @@
-﻿using System.Reflection.PortableExecutable;
+﻿using System;
+using System.IO;
 using System.Text;
 
-namespace EXO.WebServer.Server
+namespace EXO.Networking.Common
 {
     public class Packet : IDisposable
     {
@@ -28,7 +29,7 @@ namespace EXO.WebServer.Server
 
         public Packet(byte[] _rawData)
         {
-            mStream = new(_rawData);
+            mStream = new MemoryStream(_rawData);
 
             mWriter = new BinaryWriter(mStream);
             mReader = new BinaryReader(mStream);
@@ -106,7 +107,7 @@ namespace EXO.WebServer.Server
 
         public int length;
 
-        public byte[] RawData => mStream.ToArray();
+        public virtual byte[] RawData => mStream.ToArray();
 
         public long Length => mStream.Length;
 
@@ -124,7 +125,7 @@ namespace EXO.WebServer.Server
 
         public byte[] ReadRest()
         {
-            int count = (int)(mStream.Length - mStream.Position);
+            int count = (int)(mStream.Position - mStream.Length);
             byte[] buffer = new byte[count];
             mStream.Read(buffer, 0, count);
             return buffer;
@@ -135,6 +136,25 @@ namespace EXO.WebServer.Server
             mStream.Dispose();
             mReader.Dispose();
             mWriter.Dispose();
+        }
+
+        public static Packet CreateCustomPacket(int customType, long? to = null)
+        {
+
+            // Custom Packet:
+            // CLIENT: [Header][CustomType][Payload]
+            // HOST: [HEADER][TO][Payload]
+            
+
+            Packet packet = new Packet((byte)PacketType.Custom);
+            packet.Write(customType);
+
+            if (to.HasValue)
+            {
+                packet.Write(to.Value);
+            }
+
+            return packet;
         }
     }
 }
