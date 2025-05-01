@@ -1,0 +1,6 @@
+@EXO.WebServer_HostAddress = http://localhost:5266
+
+GET {{EXO.WebServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

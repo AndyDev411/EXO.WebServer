@@ -1,0 +1,70 @@
+# Visual Studio / Rider
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build output
+bin/
+obj/
+out/
+publish/
+
+# NuGet packages
+*.nupkg
+packages/
+# Auto-generated project.lock.json (if using older project.json)
+project.lock.json
+project.fragment.lock.json
+
+# Visual Studio cache files
+*.VC.db
+*.VC.opendb
+
+# Entity Framework Migrations (if you keep them out-of-repo)
+# Migrations/
+
+# Rider
+.idea/
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# DotCover coverage
+*.dotCover
+
+# StyleCop
+StyleCopReport.xml
+
+# ASP.NET temporary files
+app_data/
+App_Data/
+
+# IIS Express
+iisexpress/
+
+# User secrets (via Secret Manager tool)
+secrets.json
+
+# SQL Server files
+*.mdf
+*.ldf
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.override.yml
+**/Dockerfile.*
+
+# OS-generated
+.DS_Store
+Thumbs.db
+
+appsettings.json
+Cert
+appsettings.Development.json
