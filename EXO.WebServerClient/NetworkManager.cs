@@ -16,7 +16,30 @@ namespace EXO.WebClient
         /// <summary>
         /// URL to the WebSocket Server.
         /// </summary>
-        public const string URL = "wss://play.theboizgaming.com:8080/ws";
+        public string URL { get; set; } = "wss://play.theboizgaming.com:8080/ws";
+
+        /// <summary>
+        /// Static method used for sending things to the relay Server. Can be used by either a Client or a Host.
+        /// </summary>
+        /// <param name="toSend"> The Packet that we want to send. </param>
+        /// <param name="to"> The ClientID of the person we want to send it to. (Only used if NetworkManager is acting as host.) </param>
+        public static void Send(Packet toSend, long to = 0)
+            => NetworkManager.Instance.SendPacket(toSend);
+
+        /// <summary>
+        /// Static method use for sending things to the relay Server. Can only be used by a Host.
+        /// </summary>
+        /// <param name="packet"> Packet we want to send. </param>
+        /// <param name="except"> If there is one client we do not want to broadcast to set this to their CliendID. </param>
+        public static void Broadcast(Packet packet, long? except = null)
+        {
+            if (NetworkManager.Instance == null)
+            {
+                throw new Exception("NetworkManager Instance has not been created, prior to static calls.");
+            }
+
+            NetworkManager.Instance.ServerBroadcast(packet, except);
+        } 
 
         /// <summary>
         /// Event that is called when the Host has connected to the server and was successful.
@@ -213,7 +236,7 @@ namespace EXO.WebClient
             socket.SendAsync(new(packet.RawData), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
         }
 
-        public void Send(Packet packet, long to = 0)
+        public void SendPacket(Packet packet, long to = 0)
         {
             if (IsHost)
             {

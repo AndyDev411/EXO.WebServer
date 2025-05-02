@@ -91,12 +91,12 @@ namespace ServerTestApp
                 {
                     packet.Write(NetworkManager.LocalID);
                     packet.Write(send_txtbox.Text);
-                    networkManager.ServerBroadcast(packet);
+                    NetworkManager.Broadcast(packet);
                 }
                 else
                 {
                     packet.Write(send_txtbox.Text);
-                    networkManager.Send(packet);
+                    NetworkManager.Send(packet);
                 }
             }
 
@@ -138,7 +138,7 @@ namespace ServerTestApp
             {
                 bcPacket.Write(from);
                 bcPacket.Write(name);
-                NetworkManager.Instance?.ServerBroadcast(packet, from);
+                NetworkManager.Broadcast(packet, from);
             }
 
 
@@ -149,7 +149,7 @@ namespace ServerTestApp
                 {
                     provideInfoPacket.Write(client.Key);
                     provideInfoPacket.Write(client.Value);
-                    NetworkManager.Instance?.ServerSend(from, provideInfoPacket);
+                    NetworkManager.Send(provideInfoPacket, from);
                 }
             }
 
@@ -178,7 +178,7 @@ namespace ServerTestApp
                 // Write the message...
                 bcPacket.Write(msg);
                 // Broadcast the packet!
-                NetworkManager.Instance?.ServerBroadcast(packet, from);
+                NetworkManager.Broadcast(packet, from);
             }
         }
 
