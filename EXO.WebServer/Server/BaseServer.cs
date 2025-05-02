@@ -32,6 +32,9 @@ namespace EXO.WebServer.Server
                 }
 
             }
+
+            // Let the client know it disconnected...
+            client.NotifyClientDisconnected();
             logger?.LogInformation($"{innerClient.ClientID} : Has Disconnected...");
 
         }

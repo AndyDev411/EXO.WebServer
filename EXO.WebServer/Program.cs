@@ -1,9 +1,7 @@
 using EXO.WebServer;
 using EXO.WebServer.Server;
 using EXO.WebServer.Server.Routers;
-using System.Net;
 using System.Net.WebSockets;
-using System.Security.Cryptography.X509Certificates;
 using Serilog;
 using Serilog.Events;
 using EXO.WebServer.Server.Rooms;
@@ -18,9 +16,9 @@ builder.Services.AddTransient<IMessageRouter, RoomRouter>();
 builder.Services.AddTransient<ClientFactory>();
 
 // Singletons...
+builder.Services.AddSingleton<ClientManager>();
 builder.Services.AddSingleton<RoomManager>();
 builder.Services.AddSingleton<IServer, RoomServer>();
-builder.Services.AddSingleton<ClientManager>();
 
 // Logging...
 builder.Services.AddLogging();

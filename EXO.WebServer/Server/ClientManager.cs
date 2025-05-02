@@ -1,8 +1,10 @@
-﻿namespace EXO.WebServer.Server
+﻿
+namespace EXO.WebServer.Server
 {
     public class ClientManager : IClientManager
     {
 
+        public event Action<IClient>? OnClientDisconnectEvent;
 
         private readonly ClientFactory clientFactory;
 
@@ -19,8 +21,14 @@
         public IClient HandleConnection(IConnection connection)
         {
             var client = clientFactory.CreateClient(connection);
+            client.OnClientDisconnectEvent += OnClientDisconnectHandler;
             Clients.Add(client.ClientID, client);
             return client;
+        }
+
+        private void OnClientDisconnectHandler(IClient client)
+        {
+            OnClientDisconnectEvent?.Invoke(client);
         }
 
         private long GetClientID()
@@ -32,7 +40,7 @@
 
         public async Task DisconnectClient(long clientID)
         {
-            await Clients[clientID].DisconnectAsync();
+            await Clients[clientID].ForceDisconnectAsync();
         }
 
         public async Task RemoveClient(long clientID)

@@ -8,6 +8,20 @@ namespace EXO.WebServer.Server.Rooms
 
         public Dictionary<long, RoomRecord> clientRoomDict = new();
 
+        public RoomManager(ClientManager _clientManager)
+        {
+            _clientManager.OnClientDisconnectEvent += OnClientDisconnectHandler;
+        }
+
+        private void OnClientDisconnectHandler(IClient client)
+        {
+            // Grab the room...
+            var room = GetRoomByClient(client);
+
+            // Remove the client from the room...
+            room?.room.RemoveClient(client);
+        }
+
         public RoomRecord CreateRoom(IClient _host, string _roomName)
         {
             var room = new Room(_host);

@@ -11,15 +11,15 @@ namespace EXO.WebServer.Server.Routers
         Dictionary<byte, Action<Packet, IClient>> PacketHandlers = new();
 
 
-        public RoomRouter(RoomManager _roomManager) 
+        public RoomRouter(RoomManager _roomManager, ClientManager _clientManager) 
         {
-            roomManager = _roomManager;
 
             PacketHandlers.Add((byte)PacketType.RequestHostRoom, this.HandleHostRoomPacket);
             PacketHandlers.Add((byte)PacketType.RequestJoinRoom, this.HandleJoinRoomPacket);
             PacketHandlers.Add((byte)PacketType.Custom, this.HandleCustomPacket);
 
         }
+
         public void RouteMessage(byte[] message, IClient from)
         {
             using (var packet = new Packet(message))

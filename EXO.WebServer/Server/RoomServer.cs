@@ -16,9 +16,6 @@ namespace EXO.WebServer.Server
 
         public override Task HandleClient(IClient client)
         {
-
-            
-
             return base.HandleClient(client);
         }
     }
