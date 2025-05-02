@@ -125,7 +125,7 @@ namespace EXO.Networking.Common
 
         public byte[] ReadRest()
         {
-            int count = (int)(mStream.Position - mStream.Length);
+            int count = (int)(mStream.Length - mStream.Position);
             byte[] buffer = new byte[count];
             mStream.Read(buffer, 0, count);
             return buffer;

@@ -44,6 +44,11 @@ namespace EXO.WebClient
         private ClientWebSocket socket = new();
 
         /// <summary>
+        /// The local persons ID...
+        /// </summary>
+        public static long LocalID { get; private set; }
+
+        /// <summary>
         /// Singleton Instance.
         /// </summary>
         public static NetworkManager? Instance { get; set; }
@@ -87,43 +92,87 @@ namespace EXO.WebClient
         }
 
         /// <summary>
-        /// Starts the local NetworkManager as a host.
+        /// Starts the NetworkManager as a Host on the Remote Server.
         /// </summary>
-        /// <param name="roomName"> The name of the room we want to host. </param>
-        public void StartHost(string roomName)
+        /// <param name="roomName"> The name of the room you would like to host. </param>
+        /// <returns> True if it was successful and false if it was not. </returns>
+        public bool StartHost(string roomName)
         {
-            Connect();
+            if (!Connect())
+            {
+                return false;
+            }
 
-            var packet = new Packet((byte)PacketType.RequestHostRoom);
-            packet.Write(roomName);
-            RoomName = roomName;
-            PSend(packet);
+            try
+            {
+                using (var packet = new Packet((byte)PacketType.RequestHostRoom))
+                {
+                    packet.Write(roomName);
+                    RoomName = roomName;
+                    PSend(packet);
 
-            IsHost = true;
+                    IsHost = true;
+                }
+
+                return true;
+            }
+            catch (Exception exc)
+            {
+                return false;
+            }
+
+        }
+
+
+        /// <summary>
+        /// Starts the NetworkManager as aHost on the Remote Server.
+        /// </summary>
+        /// <param name="roomKey"> The Room Key we would like to query for and join. </param>
+        /// <returns> True if it sucessfully started as a client, and false if not. </returns>
+        public bool StartClient(string roomKey)
+        {
+            if (!Connect())
+            {
+                return false; 
+            }
+
+            try
+            {
+                using (var packet = new Packet((byte)PacketType.RequestJoinRoom))
+                {
+                    packet.Write(roomKey);
+                    RoomKey = roomKey;
+                    PSend(packet);
+                }
+
+                return true;
+            }
+            catch (Exception exc)
+            {
+                return false;
+            }
+
+
         }
 
         /// <summary>
-        /// Starts the local NetworkManager as a client.
+        /// Connects to the Server.
         /// </summary>
-        /// <param name="roomKey"> The key to the room we want to join. </param>
-        public void StartClient(string roomKey)
+        /// <returns> True if it sucessfully conects to the server. </returns>
+        private bool Connect()
         {
-            Connect();
+            try
+            {
+                socket.ConnectAsync(new(URL), CancellationToken.None).Wait();
 
-            var packet = new Packet((byte)PacketType.RequestJoinRoom);
-            packet.Write(roomKey);
-            RoomKey = roomKey;
-            PSend(packet);
-        }
+                Task.Run(HandleMessages);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
 
-        /// <summary>
-        /// Connects to the server.
-        /// </summary>
-        private void Connect()
-        {
-            socket.ConnectAsync(new(URL), CancellationToken.None).Wait();
-
-            Task.Run(HandleMessages);
         }
 
         /// <summary>
@@ -190,11 +239,13 @@ namespace EXO.WebClient
         public void ServerSend(long to, Packet packet)
         {
             // Create the Packet that contains the packet...
-            var newPacket = new Packet(packet.Header);
-            newPacket.Write(to);
-            newPacket.Write(packet);
+            using (var newPacket = new Packet(packet.Header))
+            {
+                newPacket.Write(to);
+                newPacket.Write(packet);
 
-            PSend(newPacket);
+                PSend(newPacket);
+            }
         }
 
         public void ServerBroadcast(Packet packet, long? except = null)
@@ -224,51 +275,48 @@ namespace EXO.WebClient
         {
             while (socket.State == WebSocketState.Open)
             {
-                var packet = await Recieve();
-
-                var header = (PacketType)packet.Header;
-
-                // Check if it is a custom header...
-                if (header == PacketType.Custom)
+                using (var packet = await Recieve())
                 {
+                    var header = (PacketType)packet.Header;
 
-                    var handlerID = packet.ReadInt();
-
-
-                    // This is only for customers...
-                    if (IsHost)
+                    // Check if it is a custom header...
+                    if (header == PacketType.Custom)
                     {
-                        long from = packet.ReadLong();
-                        // [Header][HandlerID][ClientID]
-                        var handler = hostHandlers[handlerID];
-                        handler.Invoke(null, new object[] { packet, from });
+
+                        var handlerID = packet.ReadInt();
+                        // This is only for customers...
+                        if (IsHost)
+                        {
+                            long from = packet.ReadLong();
+                            // [Header][HandlerID][ClientID]
+                            var handler = hostHandlers[handlerID];
+                            handler.Invoke(null, new object[] { packet, from });
+                        }
+                        else
+                        {
+
+                            clientHandlers[handlerID].Invoke(null, new object[] { packet });
+                        }
                     }
-                    else
+                    else // This is a Known Header...
                     {
-
-                        clientHandlers[handlerID].Invoke(null, new object[] { packet });
+                        switch (header)
+                        {
+                            case PacketType.ResponseHostRoom:
+                                Handle_ResponseHostRoom(packet);
+                                break;
+                            case PacketType.ResponseJoinRoom:
+                                Handle_ResponseJoinedRoom(packet);
+                                break;
+                            case PacketType.ClientJoinedRoom:
+                                Handle_ClientJoinedRoom(packet);
+                                break;
+                            case PacketType.ClientLeftRoom:
+                                Handle_ClientLeftRoom(packet);
+                                break;
+                        }
                     }
                 }
-                else // This is a Known Header...
-                {
-                    switch (header)
-                    {
-                        case PacketType.ResponseHostRoom:
-                            Handle_ResponseHostRoom(packet);
-                            break;
-                        case PacketType.ResponseJoinRoom:
-                            Handle_ResponseJoinedRoom(packet);
-                            break;
-                        case PacketType.ClientJoinedRoom:
-                            Handle_ClientJoinedRoom(packet);
-                            break;
-                        case PacketType.ClientLeftRoom:
-                            Handle_ClientLeftRoom(packet);
-                            break;
-                    }
-                }
-
-
             }
         }
 
@@ -281,6 +329,7 @@ namespace EXO.WebClient
         private void Handle_ResponseHostRoom(Packet packet)
         {
             //[HEADER][ROOM KEY]
+            LocalID = packet.ReadLong();
             RoomKey = packet.ReadString();
             OnHostStart?.Invoke(this, this);
         }
@@ -288,6 +337,7 @@ namespace EXO.WebClient
         private void Handle_ResponseJoinedRoom(Packet packet)
         {
             //[HEADER][ROOM NAME]
+            LocalID = packet.ReadLong();
             RoomName = packet.ReadString();
             OnClientStart?.Invoke(this, this);
         }

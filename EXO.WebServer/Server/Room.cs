@@ -26,18 +26,20 @@ namespace EXO.WebServer.Server
             onClientJoinedEvent?.Invoke(this, rec);
 
             // Create the packet...
-            var packet = new Packet((byte)PacketType.ClientJoinedRoom);
-            packet.Write(_toAdd.ClientID);
-
-            // Tell everyone the client has disconnected...
-            foreach (var client in clientRecords)
+            using (var packet = new Packet((byte)PacketType.ClientJoinedRoom))
             {
+                packet.Write(_toAdd.ClientID);
 
-                // Do not send to self...
-                if (client.client == _toAdd)
-                { continue; }
+                // Tell everyone the client has disconnected...
+                foreach (var client in clientRecords)
+                {
 
-                client.client.Connection.Send(packet.RawData);
+                    // Do not send to self...
+                    if (client.client == _toAdd)
+                    { continue; }
+
+                    client.client.Connection.Send(packet.RawData);
+                }
             }
         }
 
@@ -50,18 +52,26 @@ namespace EXO.WebServer.Server
                 onClientLeaveEvent?.Invoke(this, rec);
 
                 // Create the packet...
-                var packet = new Packet((byte)PacketType.ClientLeftRoom);
-                packet.Write(_toRemove.ClientID);
-
-                // Tell everyone the client has disconnected...
-                foreach (var client in clientRecords)
+                using (var packet = new Packet((byte)PacketType.ClientLeftRoom))
                 {
-                    client.client.Connection.Send(packet.RawData);
-                }
+                    packet.Write(_toRemove.ClientID);
 
+                    // Tell everyone the client has disconnected...
+                    foreach (var client in clientRecords)
+                    {
+                        client.client.Connection.Send(packet.RawData);
+                    }
+                }
             }
         }
 
+        public void KillRoom()
+        {
+            foreach (var client in clientRecords)
+            { 
+                client.client.ForceDisconnectAsync().Wait();
+            }
+        }
 
         public record ClientRecord(IClient client, bool isHost);
     }

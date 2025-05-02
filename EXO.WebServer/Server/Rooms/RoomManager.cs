@@ -1,6 +1,4 @@
-﻿using System.Linq;
-
-namespace EXO.WebServer.Server.Rooms
+﻿namespace EXO.WebServer.Server.Rooms
 {
     public class RoomManager
     {
@@ -15,11 +13,23 @@ namespace EXO.WebServer.Server.Rooms
 
         private void OnClientDisconnectHandler(IClient client)
         {
+
             // Grab the room...
             var room = GetRoomByClient(client);
 
-            // Remove the client from the room...
-            room?.room.RemoveClient(client);
+            // If the client is the host... Kill the room...
+            if (room.room.host.ClientID == client.ClientID)
+            {
+                // Remove the host first...
+                room.room.RemoveClient(client);
+                // Destory the room...
+                DestroyRoom(room.roomKey);
+            }
+            else
+            {
+                // Remove the client from the room...
+                room?.room.RemoveClient(client);
+            }
         }
 
         public RoomRecord CreateRoom(IClient _host, string _roomName)
@@ -31,6 +41,12 @@ namespace EXO.WebServer.Server.Rooms
             SetRoom(_host, room);
 
             return rec;
+        }
+
+        public void DestroyRoom(string roomKey)
+        {
+            rooms[roomKey].room.KillRoom();
+            rooms.Remove(roomKey);
         }
 
         public RoomRecord? GetRoomByClient(IClient client)
@@ -73,5 +89,11 @@ namespace EXO.WebServer.Server.Rooms
             MoveRoom(client, rooms[roomKey].room);
         }
         public record RoomRecord(string roomKey, Room room, string roomName);
+
+        public IEnumerable<RoomRecord> GetRoomRecords()
+            => rooms.Values;
+
+        public RoomRecord GetRoom(string roomKey)
+            => rooms[roomKey];
     }
 }

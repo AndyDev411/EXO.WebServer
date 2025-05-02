@@ -13,7 +13,7 @@ namespace EXO.WebServer.Server.Routers
 
         public RoomRouter(RoomManager _roomManager, ClientManager _clientManager) 
         {
-
+            roomManager = _roomManager;
             PacketHandlers.Add((byte)PacketType.RequestHostRoom, this.HandleHostRoomPacket);
             PacketHandlers.Add((byte)PacketType.RequestJoinRoom, this.HandleJoinRoomPacket);
             PacketHandlers.Add((byte)PacketType.Custom, this.HandleCustomPacket);
@@ -49,10 +49,14 @@ namespace EXO.WebServer.Server.Routers
 
             var roomRec = roomManager.CreateRoom(client, roomName);
 
-            var sendPacket = new Packet((byte)PacketType.ResponseHostRoom);
-            sendPacket.Write(roomRec.roomKey);
+            using (var sendPacket = new Packet((byte)PacketType.ResponseHostRoom))
+            {
+                // Write the requesting clients ID...
+                sendPacket.Write(client.ClientID);
+                sendPacket.Write(roomRec.roomKey);
 
-            client.Connection.Send(sendPacket.RawData);
+                client.Connection.Send(sendPacket.RawData);
+            }
         }
 
         private void HandleJoinRoomPacket(Packet packet, IClient client)
@@ -62,10 +66,15 @@ namespace EXO.WebServer.Server.Routers
 
             var roomRec = roomManager.rooms[roomKey];
 
-            var sendPacket = new Packet((byte)PacketType.ResponseJoinRoom);
-            sendPacket.Write(roomRec.roomName);
+            using (var sendPacket = new Packet((byte)PacketType.ResponseJoinRoom))
+            {
+                // Write the requesting clients ID...
+                sendPacket.Write(client.ClientID);
+                sendPacket.Write(roomRec.roomName);
 
-            client.Connection.Send(sendPacket.RawData);
+                client.Connection.Send(sendPacket.RawData);
+            }
+
         }
 
         private void HandleCustomPacket(Packet packet, IClient client)
@@ -94,10 +103,12 @@ namespace EXO.WebServer.Server.Routers
                 var clientToSendTo = room.room.clientRecords.First(c => c.client.ClientID == toSendToID);
 
                 // Create the send packet...
-                var sendPacket = packet.ReadPacket();
+                using (var sendPacket = packet.ReadPacket())
+                {
+                    // Transmit message...
+                    clientToSendTo.client.Connection.Send(sendPacket.RawData);
+                }
 
-                // Transmit message...
-                clientToSendTo.client.Connection.Send(sendPacket.RawData);
             }
             else // If they are not the host we want to send to the host...
             {
@@ -114,17 +125,16 @@ namespace EXO.WebServer.Server.Routers
                 // Read the Rest of the packet into there...
                 var rest = packet.ReadRest();
 
-                var sendPacket = new Packet((byte)PacketType.Custom);
-                sendPacket.Write(handlerID);
-                sendPacket.Write(client.ClientID);
-                sendPacket.Write(rest);
+                using (var sendPacket = new Packet((byte)PacketType.Custom))
+                {
+                    sendPacket.Write(handlerID);
+                    sendPacket.Write(client.ClientID);
+                    sendPacket.Write(rest);
 
-                // Send the data to the host...
-                toSendTo.Connection.Send(sendPacket.RawData);
-
+                    // Send the data to the host...
+                    toSendTo.Connection.Send(sendPacket.RawData);
+                }
             }
-
-            
         }
     }
 }
