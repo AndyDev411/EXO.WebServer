@@ -1,4 +1,6 @@
-﻿namespace EXO.WebServer.Server.Routers
+﻿using EXO.Networking.Common;
+
+namespace EXO.WebServer.Server.Routers
 {
     public class EchoRouter : IMessageRouter
     {
@@ -12,7 +14,7 @@
 
             if (msg.ToUpper() == WHO_AM_I_COMMAND)
             {
-                from.Connection.Send($"You are client: {from.ClientID}");
+                from.Connection.Send($"You are client: {from.ID}");
                 return;
             }
 

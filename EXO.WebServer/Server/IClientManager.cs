@@ -1,4 +1,6 @@
 ﻿
+using EXO.Networking.Common;
+
 namespace EXO.WebServer.Server
 {
     public interface IClientManager

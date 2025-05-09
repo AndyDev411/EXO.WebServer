@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using EXO.Networking.Common;
+using System.Diagnostics;
 
 namespace EXO.WebClient
 {
@@ -24,7 +25,7 @@ namespace EXO.WebClient
         /// <param name="toSend"> The Packet that we want to send. </param>
         /// <param name="to"> The ClientID of the person we want to send it to. (Only used if NetworkManager is acting as host.) </param>
         public static void Send(Packet toSend, long to = 0)
-            => NetworkManager.Instance.SendPacket(toSend);
+            => NetworkManager.Instance.SendPacket(toSend, to);
 
         /// <summary>
         /// Static method use for sending things to the relay Server. Can only be used by a Host.
@@ -54,17 +55,22 @@ namespace EXO.WebClient
         /// <summary>
         /// Event that is called when a Client has joined.
         /// </summary>
-        public event EventHandler<ClientInfo> OnClientJoin;
+        public event EventHandler<ExoClient> OnClientJoin;
 
         /// <summary>
         /// Event that is called when a Client has left.
         /// </summary>
-        public event EventHandler<ClientInfo> OnClientLeft;
+        public event EventHandler<ExoClient> OnClientLeft;
 
         /// <summary>
         /// Client WebSocket we will use to communicate to the server.
         /// </summary>
-        private ClientWebSocket socket = new();
+        private IConnection connection;
+
+        /// <summary>
+        /// Connection Factory used for managing the connection.
+        /// </summary>
+        private readonly IConnectionFactory connectionFactory;
 
         /// <summary>
         /// The local persons ID...
@@ -98,14 +104,18 @@ namespace EXO.WebClient
 
         private Dictionary<int, MethodInfo> clientHandlers = new();
         private Dictionary<int, MethodInfo> hostHandlers = new();
+        public Dictionary<long, ExoClient> clients = new();
 
         /// <summary>
         /// Clients that are connected to the server.
         /// </summary>
-        private Dictionary<long, ClientInfo> Clients { get; } = new();
+        private Dictionary<long, ExoClient> Clients { get; } = new();
 
-        public NetworkManager() 
+        public NetworkManager(IConnectionFactory connectionFactory) 
         {
+
+            this.connectionFactory = connectionFactory;
+
             if (Instance == null)
             {
                 Instance = this;
@@ -119,7 +129,7 @@ namespace EXO.WebClient
         /// </summary>
         /// <param name="roomName"> The name of the room you would like to host. </param>
         /// <returns> True if it was successful and false if it was not. </returns>
-        public bool StartHost(string roomName)
+        public bool StartHost(string roomName, string username)
         {
             if (!Connect())
             {
@@ -130,6 +140,7 @@ namespace EXO.WebClient
             {
                 using (var packet = new Packet((byte)PacketType.RequestHostRoom))
                 {
+                    packet.Write(username);
                     packet.Write(roomName);
                     RoomName = roomName;
                     PSend(packet);
@@ -152,7 +163,7 @@ namespace EXO.WebClient
         /// </summary>
         /// <param name="roomKey"> The Room Key we would like to query for and join. </param>
         /// <returns> True if it sucessfully started as a client, and false if not. </returns>
-        public bool StartClient(string roomKey)
+        public bool StartClient(string roomKey, string username)
         {
             if (!Connect())
             {
@@ -163,6 +174,7 @@ namespace EXO.WebClient
             {
                 using (var packet = new Packet((byte)PacketType.RequestJoinRoom))
                 {
+                    packet.Write(username);
                     packet.Write(roomKey);
                     RoomKey = roomKey;
                     PSend(packet);
@@ -186,7 +198,7 @@ namespace EXO.WebClient
         {
             try
             {
-                socket.ConnectAsync(new(URL), CancellationToken.None).Wait();
+                connection = connectionFactory.CreateConnection();
 
                 Task.Run(HandleMessages);
                 return true;
@@ -232,9 +244,7 @@ namespace EXO.WebClient
         /// </summary>
         /// <param name="packet"> The packet we want to use. </param>
         private void PSend(Packet packet)
-        {
-            socket.SendAsync(new(packet.RawData), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
-        }
+            => connection.Send(packet.RawData).GetAwaiter().GetResult();
 
         public void SendPacket(Packet packet, long to = 0)
         {
@@ -277,7 +287,7 @@ namespace EXO.WebClient
             if (IsClient)
             { throw new Exception("Cannot Use ServerBroadcast as a client..."); }
 
-            var clientIDs = Clients.Values.Select(c => c.clientID);
+            var clientIDs = Clients.Values.Select(c => c.ID);
             foreach (var clientID in clientIDs)
             {
 
@@ -296,11 +306,19 @@ namespace EXO.WebClient
         /// <returns> Task. </returns>
         private async Task HandleMessages()
         {
-            while (socket.State == WebSocketState.Open)
+
+            Debug.WriteLine("Starting the handling of messages!");
+
+            while (connection.Connected)
             {
                 using (var packet = await Recieve())
                 {
+
+                    Debug.WriteLine("Recieved a packet!");
+
                     var header = (PacketType)packet.Header;
+
+                    Debug.WriteLine($"Packed Header: {header}");
 
                     // Check if it is a custom header...
                     if (header == PacketType.Custom)
@@ -362,7 +380,23 @@ namespace EXO.WebClient
             //[HEADER][ROOM NAME]
             LocalID = packet.ReadLong();
             RoomName = packet.ReadString();
+
+            // Read all the client...
+            ReadClients(packet);
+
+
             OnClientStart?.Invoke(this, this);
+        }
+
+        private void ReadClients(Packet packet)
+        {
+            int count = packet.ReadInt();
+
+            for (int i = 0; i < count; i++)
+            {
+                Handle_ClientJoinedRoom(packet);
+            }
+
         }
 
         private void Handle_ClientLeftRoom(Packet packet)
@@ -377,47 +411,15 @@ namespace EXO.WebClient
         private void Handle_ClientJoinedRoom(Packet packet)
         {
             // [HEADER][ClientID]
-            var id = packet.ReadLong();
-            var rec = new ClientInfo(id, "");
-            Clients.Add(id, rec);
-            OnClientJoin?.Invoke(this, rec);
+            var client = packet.ReadClient();
+            Clients.Add(client.ID, client);
+            OnClientJoin?.Invoke(this, client);
         }
 
         #endregion
 
-        public async Task<Packet> Recieve(int bufferSize = 4 * 1024, CancellationToken cancellationToken = default)
-        {
-
-            if (socket.State != WebSocketState.Open)
-                throw new InvalidOperationException("WebSocket is not open.");
-
-            var buffer = new byte[bufferSize];
-            using var ms = new MemoryStream();
-
-            WebSocketReceiveResult result;
-            do
-            {
-                result = await socket.ReceiveAsync(
-                    new ArraySegment<byte>(buffer),
-                    cancellationToken);
-
-                // if the client asked to close, you can choose to close or return what you've got
-                if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    // gracefully close from server side too
-                    await socket.CloseAsync(
-                        WebSocketCloseStatus.NormalClosure,
-                        "Closing in response to client",
-                        cancellationToken);
-                    return new Packet(ms.ToArray());
-                }
-
-                ms.Write(buffer, 0, result.Count);
-            }
-            while (!result.EndOfMessage);
-
-            return new Packet(ms.ToArray());
-        }
+        public async Task<Packet> Recieve()
+            => new Packet(await connection.Recieve());
 
         public enum NetworkType
         {
@@ -456,6 +458,5 @@ namespace EXO.WebClient
             return methodsWithAttribute;
         }
 
-        public record ClientInfo(long clientID, string name);
     }
 }

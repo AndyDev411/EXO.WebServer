@@ -1,4 +1,6 @@
 ﻿
+using EXO.Networking.Common;
+
 namespace EXO.WebServer.Server
 {
     public class BaseServer : IServer
@@ -16,26 +18,27 @@ namespace EXO.WebServer.Server
         public virtual async Task HandleClient(IClient client)
         {
 
-            var innerClient = client;
-
-            logger?.LogInformation($"{innerClient.ClientID} : Running Client Logic Loop...");
-            while (innerClient.Connection.Connected)
+            using (var innerClient = client)
             {
-                try
+                logger?.LogInformation($"{innerClient.ID} : Running Client Logic Loop...");
+                while (innerClient.Connection.Connected)
                 {
-                    var message = await innerClient.Connection.Recieve();
-                    messageRouter.RouteMessage(message, client);
-                }
-                catch
-                {
-                    break;
+                    try
+                    {
+                        var message = await innerClient.Connection.Recieve();
+                        messageRouter.RouteMessage(message, client);
+                    }
+                    catch
+                    {
+                        break;
+                    }
+
                 }
 
+                // Let the client know it disconnected...
+                client.NotifyClientDisconnected();
+                logger?.LogInformation($"{innerClient.ID} : Has Disconnected...");
             }
-
-            // Let the client know it disconnected...
-            client.NotifyClientDisconnected();
-            logger?.LogInformation($"{innerClient.ClientID} : Has Disconnected...");
 
         }
     }

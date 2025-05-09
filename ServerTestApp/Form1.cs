@@ -12,7 +12,9 @@ namespace ServerTestApp
         public const int CMD_SEND_MSG = 2;
 
         public const string URL = "wss://play.theboizgaming.com:8080/ws";
-        private NetworkManager networkManager = new();
+        public const int READ_BUFFER_SIZE = 4096;
+
+        private NetworkManager networkManager = new(new WebsocketConnectionFactory(URL, READ_BUFFER_SIZE));
 
         public Dictionary<long, string> clientNames = new();
 
@@ -24,20 +26,25 @@ namespace ServerTestApp
             InitializeComponent();
             networkManager.OnHostStart += HandleHostStart;
             networkManager.OnClientStart += HandleClientStart;
+            networkManager.OnClientLeft += HandleClientLeft;
+            networkManager.OnClientJoin += HandleClientJoined;
+        }
+
+        private void HandleClientJoined(object? sender, ExoClient e)
+        {
+            SetClientName(e.ID, e.Name);
+        }
+
+        private void HandleClientLeft(object? sender, ExoClient e)
+        {
+            var removeName = clientNames[e.ID];
+            clientNames.Remove(e.ID);
+            WriteToScreen($"{removeName} Has left the server...");
         }
 
         private void HandleClientStart(object? sender, NetworkManager e)
         {
             SetText(e.RoomName, room_name_txtbox);
-
-            // Send my name to the server...
-            using (var packet = Packet.CreateCustomPacket(CMD_SEND_NAME))
-            {
-                packet.Write(name_txtbox.Text);
-
-                networkManager.ClientSend(packet);
-            }
-
         }
 
         private void HandleHostStart(object? sender, NetworkManager e)
@@ -59,7 +66,7 @@ namespace ServerTestApp
 
         private void host_btn_Click(object sender, EventArgs e)
         {
-            if (networkManager.StartHost(room_name_txtbox.Text))
+            if (networkManager.StartHost(room_name_txtbox.Text, name_txtbox.Text))
             {
                 SetText(networkManager.RoomKey, room_key_txtbox);
             } else 
@@ -91,12 +98,12 @@ namespace ServerTestApp
                 {
                     packet.Write(NetworkManager.LocalID);
                     packet.Write(send_txtbox.Text);
-                    NetworkManager.Broadcast(packet);
+                    NetworkManager.Instance?.ServerBroadcast(packet);
                 }
                 else
                 {
                     packet.Write(send_txtbox.Text);
-                    NetworkManager.Send(packet);
+                    NetworkManager.Instance?.ClientSend(packet);
                 }
             }
 
@@ -106,51 +113,13 @@ namespace ServerTestApp
 
         private void join_btn_Click(object sender, EventArgs e)
         {
-            if (networkManager.StartClient(room_key_txtbox.Text))
+            if (networkManager.StartClient(room_key_txtbox.Text, name_txtbox.Text))
             {
                 SetText(networkManager.RoomName, room_name_txtbox);
             }
             else 
             {
                 WriteToScreen("Could not connect to remote server!");
-            }
-
-        }
-
-        [ClientMessageHandler(CMD_SEND_NAME)]
-        public static void Client_HandleNameRecieved(Packet packet)
-        {
-            var from = packet.ReadLong();
-            var name = packet.ReadString();
-            
-            SetClientName(from, name);
-        }
-
-        [HostMessageHandler(CMD_SEND_NAME)]
-        public static void Host_HandleNameRecieved(Packet packet, long from)
-        {
-            // We are recieving a name...
-            var name = packet.ReadString();
-
-            SetClientName(from, name);
-
-            using (var bcPacket = Packet.CreateCustomPacket(CMD_SEND_NAME))
-            {
-                bcPacket.Write(from);
-                bcPacket.Write(name);
-                NetworkManager.Broadcast(packet, from);
-            }
-
-
-            // Send all the previously known player names...
-            foreach (var client in form.clientNames)
-            {
-                using (var provideInfoPacket = Packet.CreateCustomPacket(CMD_SEND_NAME))
-                {
-                    provideInfoPacket.Write(client.Key);
-                    provideInfoPacket.Write(client.Value);
-                    NetworkManager.Send(provideInfoPacket, from);
-                }
             }
 
         }
@@ -178,7 +147,7 @@ namespace ServerTestApp
                 // Write the message...
                 bcPacket.Write(msg);
                 // Broadcast the packet!
-                NetworkManager.Broadcast(packet, from);
+                NetworkManager.Instance?.ServerBroadcast(bcPacket, from);
             }
         }
 

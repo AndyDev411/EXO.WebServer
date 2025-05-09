@@ -1,4 +1,6 @@
 ﻿
+using EXO.Networking.Common;
+
 namespace EXO.WebServer.Server
 {
     public class ClientManager : IClientManager
@@ -22,7 +24,7 @@ namespace EXO.WebServer.Server
         {
             var client = clientFactory.CreateClient(connection);
             client.OnClientDisconnectEvent += OnClientDisconnectHandler;
-            Clients.Add(client.ClientID, client);
+            Clients.Add(client.ID, client);
             return client;
         }
 

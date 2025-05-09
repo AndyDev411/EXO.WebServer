@@ -1,6 +1,9 @@
-﻿namespace EXO.WebServer
+﻿using System;
+using System.Threading.Tasks;
+
+namespace EXO.Networking.Common
 {
-    public interface IConnection
+    public interface IConnection : IDisposable
     {
 
         public Task Send(byte[] toSend);
@@ -16,3 +19,5 @@
         public bool Connected { get; }
     }
 }
+
+

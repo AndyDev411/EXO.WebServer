@@ -9,10 +9,12 @@ namespace EXO.WebServer.Server
         public EventHandler<ClientRecord> onClientLeaveEvent;
 
         public IClient host;
+        public ILogger logger;
 
-        public Room(IClient _host)
+        public Room(IClient _host, ILogger _logger)
         {
             host = _host;
+            logger = _logger;
             var rec = new ClientRecord(_host, true);
             clientRecords.Add(rec);
         }
@@ -28,7 +30,7 @@ namespace EXO.WebServer.Server
             // Create the packet...
             using (var packet = new Packet((byte)PacketType.ClientJoinedRoom))
             {
-                packet.Write(_toAdd.ClientID);
+                packet.Write(_toAdd);
 
                 // Tell everyone the client has disconnected...
                 foreach (var client in clientRecords)
@@ -54,7 +56,7 @@ namespace EXO.WebServer.Server
                 // Create the packet...
                 using (var packet = new Packet((byte)PacketType.ClientLeftRoom))
                 {
-                    packet.Write(_toRemove.ClientID);
+                    packet.Write(_toRemove.ID);
 
                     // Tell everyone the client has disconnected...
                     foreach (var client in clientRecords)
@@ -67,10 +69,18 @@ namespace EXO.WebServer.Server
 
         public void KillRoom()
         {
-            foreach (var client in clientRecords)
-            { 
-                client.client.ForceDisconnectAsync().Wait();
+            try
+            {
+                for (int i = 0; i < clientRecords.Count; i++)
+                {
+                    clientRecords[i].client.ForceDisconnectAsync().GetAwaiter().GetResult();
+                }
             }
+            catch (Exception exc)
+            {
+                logger.LogInformation($"Error Killing room!");
+            }
+
         }
 
         public record ClientRecord(IClient client, bool isHost);

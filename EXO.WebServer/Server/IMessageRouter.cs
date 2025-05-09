@@ -1,4 +1,4 @@
-﻿using EXO.WebServer.Server;
+﻿using EXO.Networking.Common;
 
 namespace EXO.WebServer
 {

@@ -1,4 +1,5 @@
 ﻿
+using EXO.Networking.Common;
 using System.Net.WebSockets;
 
 namespace EXO.WebServer
@@ -19,6 +20,12 @@ namespace EXO.WebServer
         public async Task DisconnectAsync()
         {
             await tokenSource.CancelAsync();
+        }
+
+        public void Dispose()
+        {
+            socket?.Dispose();
+            tokenSource?.Dispose();
         }
 
         public async Task<byte[]> Recieve()

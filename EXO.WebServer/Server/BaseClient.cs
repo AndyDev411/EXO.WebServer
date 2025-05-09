@@ -1,5 +1,7 @@
 ﻿
 
+using EXO.Networking.Common;
+
 namespace EXO.WebServer.Server
 {
     public class BaseClient : IClient
@@ -7,9 +9,11 @@ namespace EXO.WebServer.Server
 
         public event Action<IClient> OnClientDisconnectEvent;
 
-        public long ClientID { get; set; }
+        public long ID { get; set; }
 
         public IConnection Connection => connection;
+
+        public string Name { get; set; }
 
         /// <summary>
         /// Basic constructor.
@@ -18,7 +22,7 @@ namespace EXO.WebServer.Server
         /// <param name="_connection"> This clients connection object. </param>
         public BaseClient(long _clientID, IConnection _connection)
         {
-            ClientID = _clientID;
+            ID = _clientID;
             connection = _connection;
         }
 
@@ -31,6 +35,11 @@ namespace EXO.WebServer.Server
         public void NotifyClientDisconnected()
         {
             OnClientDisconnectEvent?.Invoke(this);
+        }
+
+        public void Dispose()
+        {
+            connection.Dispose();
         }
 
         private readonly IConnection connection;

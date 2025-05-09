@@ -1,4 +1,7 @@
-﻿namespace EXO.Networking.Common
+﻿using System;
+using System.Threading.Tasks;
+
+namespace EXO.Networking.Common
 {
     public interface IClient : IDisposable
     {
@@ -16,7 +19,7 @@
         /// <summary>
         /// Clients Identifier.
         /// </summary>
-        public long ID { get; set; }
+        public long ClientID { get; set; }
 
         /// <summary>
         /// The Connection for this client.

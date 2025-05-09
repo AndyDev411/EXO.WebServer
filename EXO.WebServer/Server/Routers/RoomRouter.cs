@@ -7,6 +7,7 @@ namespace EXO.WebServer.Server.Routers
     {
 
         RoomManager roomManager;
+        ClientManager clientManager;
 
         Dictionary<byte, Action<Packet, IClient>> PacketHandlers = new();
 
@@ -14,6 +15,8 @@ namespace EXO.WebServer.Server.Routers
         public RoomRouter(RoomManager _roomManager, ClientManager _clientManager) 
         {
             roomManager = _roomManager;
+            clientManager = _clientManager;
+
             PacketHandlers.Add((byte)PacketType.RequestHostRoom, this.HandleHostRoomPacket);
             PacketHandlers.Add((byte)PacketType.RequestJoinRoom, this.HandleJoinRoomPacket);
             PacketHandlers.Add((byte)PacketType.Custom, this.HandleCustomPacket);
@@ -37,6 +40,10 @@ namespace EXO.WebServer.Server.Routers
 
         private void HandleHostRoomPacket(Packet packet, IClient client)
         {
+            var username = packet.ReadString();
+
+            client.Name = username;
+
             var roomName = packet.ReadString();
 
             var presentRoom = roomManager.GetRoomByClient(client);
@@ -52,7 +59,7 @@ namespace EXO.WebServer.Server.Routers
             using (var sendPacket = new Packet((byte)PacketType.ResponseHostRoom))
             {
                 // Write the requesting clients ID...
-                sendPacket.Write(client.ClientID);
+                sendPacket.Write(client.ID);
                 sendPacket.Write(roomRec.roomKey);
 
                 client.Connection.Send(sendPacket.RawData);
@@ -61,6 +68,9 @@ namespace EXO.WebServer.Server.Routers
 
         private void HandleJoinRoomPacket(Packet packet, IClient client)
         {
+            var username = packet.ReadString();
+            client.Name = username;
+
             var roomKey = packet.ReadString();
             roomManager.MoveRoom(client, roomKey);
 
@@ -69,12 +79,25 @@ namespace EXO.WebServer.Server.Routers
             using (var sendPacket = new Packet((byte)PacketType.ResponseJoinRoom))
             {
                 // Write the requesting clients ID...
-                sendPacket.Write(client.ClientID);
+                sendPacket.Write(client.ID);
                 sendPacket.Write(roomRec.roomName);
+
+                // Write all the currently connected clients...
+                AppendUsers(sendPacket, roomRec.room);
 
                 client.Connection.Send(sendPacket.RawData);
             }
 
+        }
+
+        private void AppendUsers(Packet packet, Room room)
+        {
+            packet.Write(room.clientRecords.Count);
+
+            foreach (var record in room.clientRecords)
+            {
+                packet.Write(record.client);
+            }
         }
 
         private void HandleCustomPacket(Packet packet, IClient client)
@@ -88,7 +111,7 @@ namespace EXO.WebServer.Server.Routers
             }
 
             // See if the client is the host...
-            bool isHost = room.room.host.ClientID == client.ClientID;
+            bool isHost = room.room.host.ID == client.ID;
 
             if (isHost)
             {
@@ -100,7 +123,7 @@ namespace EXO.WebServer.Server.Routers
                 var toSendToID = packet.ReadLong();
 
                 // grab the client we are transmitting to...
-                var clientToSendTo = room.room.clientRecords.First(c => c.client.ClientID == toSendToID);
+                var clientToSendTo = room.room.clientRecords.First(c => c.client.ID == toSendToID);
 
                 // Create the send packet...
                 using (var sendPacket = packet.ReadPacket())
@@ -128,7 +151,7 @@ namespace EXO.WebServer.Server.Routers
                 using (var sendPacket = new Packet((byte)PacketType.Custom))
                 {
                     sendPacket.Write(handlerID);
-                    sendPacket.Write(client.ClientID);
+                    sendPacket.Write(client.ID);
                     sendPacket.Write(rest);
 
                     // Send the data to the host...

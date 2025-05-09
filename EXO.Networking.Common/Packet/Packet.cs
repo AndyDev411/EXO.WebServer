@@ -37,6 +37,7 @@ namespace EXO.Networking.Common
             Header = mReader.ReadByte();
         }
 
+
         #region Write
 
         public void Write(float _toWrite)
