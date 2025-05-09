@@ -20,7 +20,68 @@ namespace EXO.WebServer.Server.Routers
             PacketHandlers.Add((byte)PacketType.RequestHostRoom, this.HandleHostRoomPacket);
             PacketHandlers.Add((byte)PacketType.RequestJoinRoom, this.HandleJoinRoomPacket);
             PacketHandlers.Add((byte)PacketType.Custom, this.HandleCustomPacket);
+            PacketHandlers.Add((byte)PacketType.ExoSystem, this.HandleExoSystempacket);
 
+        }
+
+        private void HandleExoSystempacket(Packet packet, IClient client)
+        {
+            // Check if the user is owner or not...
+            var room = roomManager.GetRoomByClient(client);
+
+            if (room == null)
+            {
+                return;
+            }
+
+            // See if the client is the host...
+            bool isHost = room.room.host.ID == client.ID;
+
+            if (isHost)
+            {
+                // HOST PACKET LAYOUT
+                // [HEADER][RECIEVING CLIENT ID][PAYLOAD]
+                // PACKET CONTAINER : [HEADER][TO][PAYLOAD PACKET]
+
+                // Grab who we are sending it too...
+                var toSendToID = packet.ReadLong();
+
+                // grab the client we are transmitting to...
+                var clientToSendTo = room.room.clientRecords.First(c => c.client.ID == toSendToID);
+
+                // Create the send packet...
+                using (var sendPacket = packet.ReadPacket())
+                {
+                    // Transmit message...
+                    clientToSendTo.client.Connection.Send(sendPacket.RawData);
+                }
+
+            }
+            else // If they are not the host we want to send to the host...
+            {
+                // CLIENT PAYLOAD LAYOUT
+                // [HEADER][PAYLOAD]
+
+
+                // The Client we are sending to...
+                var toSendTo = room.room.host;
+
+                // Handler ID...
+                var handlerID = packet.ReadInt();
+
+                // Read the Rest of the packet into there...
+                var rest = packet.ReadRest();
+
+                using (var sendPacket = new Packet((byte)PacketType.ExoSystem))
+                {
+                    sendPacket.Write(handlerID);
+                    sendPacket.Write(client.ID);
+                    sendPacket.Write(rest);
+
+                    // Send the data to the host...
+                    toSendTo.Connection.Send(sendPacket.RawData);
+                }
+            }
         }
 
         public void RouteMessage(byte[] message, IClient from)
